@@ -34,3 +34,21 @@ top10_economicos <- dados %>%
   slice(1:10)
 ```
 
+2. Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior? (7,5 pts)
+
+```{r}
+estados_gastadores <- dados %>% 
+  filter(tipoDocumento == 2) %>% 
+  group_by(sgUF) %>% 
+  summarise(gasto_por_estado = sum(valorLíquido)) %>% 
+  arrange(desc(gasto_por_estado)) %>% 
+  slice(1:5)
+
+estados_economicos <- dados %>% 
+  filter(tipoDocumento == 2) %>% 
+  group_by(sgUF) %>% 
+  summarise(gasto_por_estado = sum(valorLíquido)) %>% 
+  arrange(gasto_por_estado) %>% 
+  slice(1:5)
+```
+

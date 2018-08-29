@@ -52,3 +52,10 @@ estados_economicos <- dados %>%
   slice(1:5)
 ```
 
+3. Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$. (7,5 pts)
+
+```{r}
+dados %>% 
+  filter(sgUF == "PB")
+```
+

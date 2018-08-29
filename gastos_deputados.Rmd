@@ -1,5 +1,36 @@
 ---
 title: "Análise de Gastos de Deputados: Nossas Perguntas"
+author: "Daniyel Rocha"
+date: "29 de agosto de 2018"
 output: html_notebook
 ---
+
+```{r warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(here)
+```
+
+```{r}
+dados = read_csv("data/dadosCEAP.csv")
+colnames(dados)
+```
+**Visão geral dos dados**
+
+
+1. Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos? (7,5 pts)
+
+```{r}
+top10_gastadores <- dados %>% 
+  group_by(nomeParlamentar) %>% 
+  summarise(gastoTotal = sum(valorLíquido)) %>% 
+  arrange(desc(gastoTotal)) %>% 
+  slice(1:10)
+
+top10_economicos <- dados %>% 
+  group_by(nomeParlamentar) %>% 
+  summarise(gastoTotal = sum(valorLíquido)) %>% 
+  arrange(gastoTotal) %>% 
+  slice(1:10)
+```
 

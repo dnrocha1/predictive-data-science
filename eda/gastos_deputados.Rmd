@@ -8,6 +8,7 @@ output: html_notebook
 ```{r warning=FALSE}
 library(tidyverse)
 library(dplyr)
+library(stringr)
 ```
 
 ```{r}
@@ -90,5 +91,12 @@ top50_sem_limites <- dados_CEAP %>%
   arrange(desc(gasto)) %>% 
   top_n(50)
   
+```
+
+5. Quais estados cujos parlamentares gastam mais com passagens aéreas? (7,5 pts)
+
+```{r}
+glimpse(dados)
+dados %>% filter(stringr::str_detect(tipoDespesa, "aér"))
 ```
 

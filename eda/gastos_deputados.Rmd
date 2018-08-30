@@ -1,0 +1,94 @@
+---
+title: "Análise de Gastos de Deputados: Nossas Perguntas"
+author: "Daniyel Rocha"
+date: "29 de agosto de 2018"
+output: html_notebook
+---
+
+```{r warning=FALSE}
+library(tidyverse)
+library(dplyr)
+```
+
+```{r}
+dados <- read_csv("data/dadosCEAP.csv")
+limite_CEAP <- read_csv("data/limiteMensalCEAP.csv")
+
+glimpse(dados)
+```
+**VISÃO GERAL DOS DADOS**
+**VISUALIZAÇÕES**
+
+
+1. Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos? (7,5 pts)
+
+```{r}
+top10_gastadores <- dados %>% 
+  group_by(nomeParlamentar) %>% 
+  summarise(gastoTotal = sum(valorLíquido)) %>% 
+  arrange(desc(gastoTotal)) %>% 
+  slice(1:10)
+
+top10_economicos <- dados %>% 
+  group_by(nomeParlamentar) %>% 
+  summarise(gastoTotal = sum(valorLíquido)) %>% 
+  arrange(gastoTotal) %>% 
+  slice(1:10)
+```
+
+2. Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior? (7,5 pts)
+
+```{r}
+estados_gastadores <- dados %>% 
+  filter(tipoDocumento == 2) %>% 
+  group_by(sgUF) %>% 
+  summarise(gasto_por_estado = sum(valorLíquido)) %>% 
+  arrange(desc(gasto_por_estado)) %>% 
+  slice(1:5)
+
+estados_economicos <- dados %>% 
+  filter(tipoDocumento == 2) %>% 
+  group_by(sgUF) %>% 
+  summarise(gasto_por_estado = sum(valorLíquido)) %>% 
+  arrange(gasto_por_estado) %>% 
+  slice(1:5)
+```
+
+3. Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$. (7,5 pts)
+
+```{r}
+gastadores_PB <- dados %>% 
+  filter(sgUF == "PB") %>%
+  group_by(sgPartido) %>% 
+  summarise(gastos_PB = sum(valorLíquido)) %>% 
+  arrange(desc(gastos_PB)) %>% 
+  slice(1:3)
+
+economicos_PB <- dados %>% 
+  filter(sgUF == "PB") %>%
+  group_by(sgPartido) %>% 
+  summarise(gastos_PB = sum(valorLíquido)) %>% 
+  arrange(gastos_PB) %>% 
+  slice(1:3)
+```
+
+4. Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
+
+```{r}
+glimpse(limite_CEAP)
+glimpse(dados)
+
+limite_CEAP <- limite_CEAP %>% rename(sgUF = UF)
+dados_CEAP <- full_join(dados, limite_CEAP, by = "sgUF")
+
+top50_sem_limites <- dados_CEAP %>% 
+  group_by(nomeParlamentar, limite_mensal, sgUF) %>% 
+  summarise(gasto = sum(valorLíquido)) %>% 
+  filter(gasto > limite_mensal) %>% 
+  ungroup() %>% 
+  select(-limite_mensal) %>%
+  arrange(desc(gasto)) %>% 
+  top_n(50)
+  
+```
+

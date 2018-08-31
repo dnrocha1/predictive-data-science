@@ -97,6 +97,14 @@ top50_sem_limites <- dados_CEAP %>%
 
 ```{r}
 glimpse(dados)
-dados %>% filter(stringr::str_detect(tipoDespesa, "aér"))
+
+top5_estados_viajantes <- dados %>% 
+  filter(stringr::str_detect(str_to_lower(tipoDespesa), "aér")) %>% 
+  group_by(nomeParlamentar, sgUF) %>% 
+  summarise(gasto_passagens = sum(valorLíquido)) %>% 
+  group_by(sgUF) %>% 
+  summarise(gasto_passagens_estado = sum(gasto_passagens)) %>% 
+  arrange(desc(gasto_passagens_estado)) %>% 
+  top_n(5)
 ```
 

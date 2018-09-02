@@ -20,6 +20,13 @@ glimpse(dados)
 **VISÃO GERAL DOS DADOS**
 **VISUALIZAÇÕES**
 
+```{r}
+#O TANTO DE DESPESA QUE NÃO É ATRIBUIDA A UM PARTIDO DE FORMA CLARA
+dados %>% 
+  filter(sgPartido %>% is.na())
+```
+
+
 
 1. Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos? (7,5 pts)
 
@@ -106,5 +113,32 @@ top5_estados_viajantes <- dados %>%
   summarise(gasto_passagens_estado = sum(gasto_passagens)) %>% 
   arrange(desc(gasto_passagens_estado)) %>% 
   top_n(5)
+```
+
+6. Escolha três partidos e responda: Quais são os tipos de despesa mais utilizados no uso da CEAP pelos deputados desses partidos? Mesma pergunta considerando valores em R$. (7,5 pts)
+
+```{r}
+set.seed(1)
+
+#agrupando as despesas por partido e filtrando as maiores despesas
+top_despesas_partido <- dados %>% 
+  group_by(sgPartido, tipoDespesa) %>% 
+  summarise(num_ocorrencias = n()) %>% 
+  filter(num_ocorrencias == max(num_ocorrencias)) %>%
+  rename(maiores_despesas = num_ocorrencias) %>% 
+  na.omit()
+
+#selecionando aleatoriamente tres partidos
+partidos <- dados %>% 
+  select(sgPartido) %>% 
+  distinct() %>%
+  na.omit() %>%
+  sample_n(3)
+
+#selecionando as despesas dos partidos escolhidos
+top_despesas_partido %>% 
+  filter(sgPartido %in% partidos$sgPartido)
+
+glimpse(dados)
 ```
 

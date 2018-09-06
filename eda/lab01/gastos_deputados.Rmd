@@ -22,8 +22,8 @@ Outros dados que fazem parte da análise são os valores com os limites de CEAP 
 
 A seguir, fazemos a leitura desses dados e observamos uma pequena amostra.
 ```{r warning=FALSE, message=FALSE}
-dados <- read_csv("data/dadosCEAP.csv", progress = FALSE)
-limite_CEAP <- read_csv("data/limiteMensalCEAP.csv")
+dados <- read_csv("../data/dadosCEAP.csv", progress = FALSE)
+limite_CEAP <- read_csv("../data/limiteMensalCEAP.csv")
 dados$valorGlosa <- as.numeric(sub(",", ".", dados$valorGlosa, fixed = TRUE)) 
 
 glimpse(dados)

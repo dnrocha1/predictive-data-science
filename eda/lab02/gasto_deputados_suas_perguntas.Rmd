@@ -1,0 +1,59 @@
+---
+title: 'Análise de Gastos de Deputados: Suas Perguntas'
+author: "Daniyel Rocha"
+date: "7 de Setembro de 2018"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE, include=FALSE}
+library(tidyverse)
+library(dplyr)
+theme_set(theme_bw())
+```
+
+#Sobre os dados
+
+As informações utilizadas são referentes aos gastos com a CEAP (cota para o exercício da atividade parlamentar). Esses valores representam uma cota única mensal, destinada a custear os gastos dos deputados federais exclusivamente vinculados ao exercício da atividade parlamentar. Os dados foram coletados do site de transparência da Câmara, tratados, e podem ser baixados neste [link](https://canvas.instructure.com/courses/1402758/files/67618888/download?verifier=ibyou5PYo9aaFgRaefc0keYkHhkQ2EqIArdmI1bq&wrap=1).
+
+Outros dados que fazem parte da análise são os valores com os limites de CEAP para cada estado. O valor máximo mensal da cota depende da unidade da federação que o deputado representa. Essa variação ocorre por causa das passagens aéreas e está relacionada ao valor do trecho entre Brasília e o Estado que o deputado representa. Os dados podem ser baixados [aqui](https://canvas.instructure.com/courses/1402758/files/67618889/download?verifier=vfi4jwcg26IVtelxRY7Sm5RnhrAuKcNrOrw2Yt6Y). 
+
+A seguir, fazemos a leitura desses dados e observamos uma pequena amostra.
+```{r warning=FALSE, message=FALSE}
+dados <- read_csv("../data/dadosCEAP.csv", progress = FALSE)
+limite_CEAP <- read_csv("../data/limiteMensalCEAP.csv")
+dados$valorGlosa <- as.numeric(sub(",", ".", dados$valorGlosa, fixed = TRUE)) 
+
+glimpse(dados)
+```
+
+
+#VIAJANTES DURANTE O RECESSO PARLAMENTAR
+##Quais são os principais gastos durante o recesso parlamentar?
+
+> Provavelmente o principal gasto será relativo a viagens, já que nesse período é muito comum ocorrerem viagens de lazer.
+
+O recesso parlamentar é o período em que os parlamentos não funcionam no Brasil, incluindo a câmara dos deputados. Esse período tem um total de 55 dias, com os trabalhos suspensos entre os dias de 23 de dezembro a 1º de fevereiro e de 18 a 31 de julho. Por conta das atividades parlamentares estarem suspensas, é plausível assumir que os gastos com a cota de exercício da atividade parlamentar não existam (ou sejam reduzidos). Na prática, as coisas não funcionam totalmente dessa maneira. Existe a chamada [Comissão Representativa do Congresso](http://www2.camara.leg.br/comunicacao/assessoria-de-imprensa/comissoes), que atua nesses períodos e, possivelmente, também faz uso do CEAP. Não existem muitas informações claras a respeito do que os parlamentares fazem no recesso, muito menos sobre a utilização do CEAP. Mais informações [aqui](http://www2.camara.leg.br/comunicacao/assessoria-de-imprensa/recesso-dos-deputados) e [aqui](https://plenarinho.leg.br/index.php/2018/01/26/o-que-e-o-recesso-parlamentar/).
+
+
+
+```{r}
+dados_recesso <- dados %>% 
+  mutate(dataEmissao = lubridate::as_date(dataEmissao)) %>% 
+  mutate(mes_dia = (month(dataEmissao)*100) + day(dataEmissao)) %>% 
+  filter(between(mes_dia,1223,1231) | between(mes_dia,101,102) | between(mes_dia,718,731)) %>% 
+  select(-mes_dia)
+
+dados_recesso %>% 
+  group_by(tipoDespesa) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+dados_recesso %>% 
+  group_by(tipoDespesa) %>% 
+  summarise(gasto = sum(valorLíquido)) %>% 
+  arrange(desc(gasto))
+
+```

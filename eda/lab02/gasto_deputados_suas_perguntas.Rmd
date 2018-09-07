@@ -11,6 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r warning=FALSE, include=FALSE}
 library(tidyverse)
 library(dplyr)
+library(lubridate)
+library(scales)
+library(gridExtra)
 theme_set(theme_bw())
 ```
 
@@ -30,30 +33,64 @@ glimpse(dados)
 ```
 
 
-#VIAJANTES DURANTE O RECESSO PARLAMENTAR
+
 ##Quais são os principais gastos durante o recesso parlamentar?
 
 > Provavelmente o principal gasto será relativo a viagens, já que nesse período é muito comum ocorrerem viagens de lazer.
 
 O recesso parlamentar é o período em que os parlamentos não funcionam no Brasil, incluindo a câmara dos deputados. Esse período tem um total de 55 dias, com os trabalhos suspensos entre os dias de 23 de dezembro a 1º de fevereiro e de 18 a 31 de julho. Por conta das atividades parlamentares estarem suspensas, é plausível assumir que os gastos com a cota de exercício da atividade parlamentar não existam (ou sejam reduzidos). Na prática, as coisas não funcionam totalmente dessa maneira. Existe a chamada [Comissão Representativa do Congresso](http://www2.camara.leg.br/comunicacao/assessoria-de-imprensa/comissoes), que atua nesses períodos e, possivelmente, também faz uso do CEAP. Não existem muitas informações claras a respeito do que os parlamentares fazem no recesso, muito menos sobre a utilização do CEAP. Mais informações [aqui](http://www2.camara.leg.br/comunicacao/assessoria-de-imprensa/recesso-dos-deputados) e [aqui](https://plenarinho.leg.br/index.php/2018/01/26/o-que-e-o-recesso-parlamentar/).
 
-
-
-```{r}
+Para responder essa pergunta, vamos primeiro filtrar as informações de gastos relativos as datas de recesso. Os dados correspondem aos recessos de final de ano de 2014 até o do meio do ano de 2017.
+```{r fig.width=10, fig.height=10}
 dados_recesso <- dados %>% 
+  mutate(tipoDespesa = str_to_upper(tipoDespesa)) %>% 
   mutate(dataEmissao = lubridate::as_date(dataEmissao)) %>% 
   mutate(mes_dia = (month(dataEmissao)*100) + day(dataEmissao)) %>% 
   filter(between(mes_dia,1223,1231) | between(mes_dia,101,102) | between(mes_dia,718,731)) %>% 
   select(-mes_dia)
 
 dados_recesso %>% 
+  filter(valorLíquido > 0) %>% 
+  summarise(gastoTotal_recesso = sum(valorLíquido))
+
+num_despesas_recesso <- dados_recesso %>% 
   group_by(tipoDespesa) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
-dados_recesso %>% 
+gasto_despesas_recesso <- dados_recesso %>% 
+  filter(valorLíquido > 0) %>% 
   group_by(tipoDespesa) %>% 
   summarise(gasto = sum(valorLíquido)) %>% 
   arrange(desc(gasto))
 
+g1 <- num_despesas_recesso %>% 
+  ggplot(aes(x=reorder(tipoDespesa, n), y=n, fill=n)) +
+  geom_bar(stat = "identity") + 
+  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",")) +
+  geom_text(aes(label=scales::comma(n, big.mark = ".", decimal.mark = ","), vjust = 0.5, hjust = 0),
+            size = 3.5, vjust="inward", hjust="inward") +
+  coord_flip() + 
+  labs(x = "Tipos de Despesas", y = "Quantidade de Despesas") +
+  ggtitle("Número de ocorrências para cada tipo de despesas") +
+  guides(fill = FALSE) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+g2 <- gasto_despesas_recesso %>% 
+  ggplot(aes(x=reorder(tipoDespesa, gasto), y=gasto, fill=gasto)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",", prefix = "R$")) +
+  geom_text(aes(label=scales::comma(gasto, big.mark = ".", decimal.mark = ","), vjust = 0.5, hjust = 0),
+            size = 3.5, vjust="inward", hjust="inward") +
+  coord_flip() +
+  labs(x = "Tipos de Despesas", y = "Gasto da despesa (em R$)", fill = "Gasto (em R$)") +
+  ggtitle("Gasto gerado por cada tipo de despesa") +
+  guides(fill = FALSE) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(g1,g2)
 ```
+Nesse período o gasto total gerado pelos parlamentares e pelas lideranças dos partidos foi em torno de 30 milhões de reais. Com base nos gráficos gerados, verificamos que, de fato, a emissão de bilhetes aéreos são os tipos de despesas que são mais frequentes durante as férias dos parlamentares. No entanto, essa despesa não gerou o maior gasto para o período: a divulgação de atividade parlamentar destacou-se como a despesa que gerou mais gastos com relação ao uso do CEAP pelos deputados, com cerca de 3 milhões de reais a mais de diferença em relação aos gastos com bilhetes aéreos, o segundo colocado.
+
+Em função disso, muitas perguntas podem surgir a respeito desses gastos: qual o motivo de uma despesa tão alta com divulgação da atividade parlamentar? Qual o motivo do contribuinte arcar com uma despesa tão alta de passagens aéreas em um período de férias? Perguntas como essa evidenciam a importância da clareza com relação às razões que levam a esses gastos.
+

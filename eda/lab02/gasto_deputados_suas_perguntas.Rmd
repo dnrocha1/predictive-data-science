@@ -31,9 +31,6 @@ dados$valorGlosa <- as.numeric(sub(",", ".", dados$valorGlosa, fixed = TRUE))
 
 glimpse(dados)
 ```
-
-
-
 ##Quais são os principais gastos durante o recesso parlamentar?
 
 > Provavelmente o principal gasto será relativo a viagens, já que nesse período é muito comum ocorrerem viagens de lazer.
@@ -94,3 +91,33 @@ Nesse período o gasto total gerado pelos parlamentares e pelas lideranças dos 
 
 Em função disso, muitas perguntas podem surgir a respeito desses gastos: qual o motivo de uma despesa tão alta com divulgação da atividade parlamentar? Qual o motivo do contribuinte arcar com uma despesa tão alta de passagens aéreas em um período de férias? Perguntas como essa evidenciam a importância da clareza com relação às razões que levam a esses gastos.
 
+
+
+
+#Quais foram as viagens mais caras dos parlamentares?
+#Mais frequentes tipos de despesas no exterior
+#fornecimento de alimentação parlamentar & divulgação de atividade parlamentar & manutenção de escritório de apoio
+#viajantes de fins de semana
+#viajantes de final de ano
+#quem foi que gastou mais nas ferias
+```{r}
+#Qual o parlamentar que mais gasta com transporte (mensalmente)
+#combustiveis, passagens, locação, serviço taxi
+dados_transporte <- dados %>% 
+  mutate(tipoDespesa = str_to_upper(tipoDespesa)) %>% 
+  filter(str_detect(tipoDespesa, "COMBUSTÍVEIS|PASSAGENS|LOCAÇÃO|TÁXI"))
+
+parlamentar_mensal_transporte <- dados_transporte %>% 
+  filter(valorLíquido > 0) %>% 
+  mutate(mes = lubridate::month(dataEmissao), ano = lubridate::year(dataEmissao)) %>% 
+  group_by(nomeParlamentar, idCadastro, sgUF, mes, ano) %>% 
+  summarise(gasto_mensal = sum(valorLíquido)) 
+
+mediana_gasto_mensal_transporte <- parlamentar_mensal_transporte %>% 
+  group_by(nomeParlamentar, idCadastro, sgUF) %>% 
+  summarise(mediana_gasto = median(gasto_mensal)) %>% 
+  na.omit(idCadastro) %>% 
+  arrange(desc(mediana_gasto))
+
+mediana_gasto_mensal_transporte
+```

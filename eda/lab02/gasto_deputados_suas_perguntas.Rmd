@@ -46,9 +46,9 @@ dados_recesso <- dados %>%
   filter(between(mes_dia,1223,1231) | between(mes_dia,101,102) | between(mes_dia,718,731)) %>% 
   select(-mes_dia)
 
-dados_recesso %>% 
-  filter(valorLíquido > 0) %>% 
-  summarise(gastoTotal_recesso = sum(valorLíquido))
+#dados_recesso %>% 
+#  filter(valorLíquido > 0) %>% 
+#  summarise(gastoTotal_recesso = sum(valorLíquido))
 
 num_despesas_recesso <- dados_recesso %>% 
   group_by(tipoDespesa) %>% 
@@ -76,11 +76,11 @@ g1 <- num_despesas_recesso %>%
 g2 <- gasto_despesas_recesso %>% 
   ggplot(aes(x=reorder(tipoDespesa, gasto), y=gasto, fill=gasto)) +
   geom_bar(stat = "identity") +
-  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",", prefix = "R$")) +
+  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",", scale = 1/1000000, prefix = "R$", suffix = "M")) +
   geom_text(aes(label=scales::comma(gasto, big.mark = ".", decimal.mark = ","), vjust = 0.5, hjust = 0),
             size = 3.5, vjust="inward", hjust="inward") +
   coord_flip() +
-  labs(x = "Tipos de Despesas", y = "Gasto da despesa (em R$)", fill = "Gasto (em R$)") +
+  labs(x = "Tipos de Despesas", y = "Gasto da despesa (em milhões de reais)", fill = "Gasto (em R$)") +
   ggtitle("Gasto gerado por cada tipo de despesa") +
   guides(fill = FALSE) +
   theme(plot.title = element_text(hjust = 0.5))
@@ -91,33 +91,81 @@ Nesse período o gasto total gerado pelos parlamentares e pelas lideranças dos 
 
 Em função disso, muitas perguntas podem surgir a respeito desses gastos: qual o motivo de uma despesa tão alta com divulgação da atividade parlamentar? Qual o motivo do contribuinte arcar com uma despesa tão alta de passagens aéreas em um período de férias? Perguntas como essa evidenciam a importância da clareza com relação às razões que levam a esses gastos.
 
+##Quais parlamentares geraram mais gastos com transporte mensalmente?
 
+> Os deputados que são de estados distantes de Brasília provavelmente apresentam mais despesas com transporte, já que o deslocamento é mais difícil.
 
-
-#Quais foram as viagens mais caras dos parlamentares?
-#Mais frequentes tipos de despesas no exterior
-#fornecimento de alimentação parlamentar & divulgação de atividade parlamentar & manutenção de escritório de apoio
-#viajantes de fins de semana
-#viajantes de final de ano
-#quem foi que gastou mais nas ferias
+Essa pergunta exige que façamos algumas manipulações com os dados, neste caso iremos acrescentar a informação da região que o estado pertence, além de considerar que o gasto com total com transporte será definido pela soma de `COMBUSTÍVEIS E LUBRIFICANTES.`, `PASSAGENS AÉREAS`, `LOCAÇÃO OU FRETAMENTO DE VEÍCULOS AUTOMOTORES`, `LOCAÇÃO OU FRETAMENTO DE EMBARCAÇÕES`, `SERVIÇO DE TÁXI, PEDÁGIO E ESTACIONAMENTO`, `LOCAÇÃO OU FRETAMENTO DE AERONAVES` e `PASSAGENS TERRESTRES, MARÍTIMAS OU FLUVIAIS`. Feito isso, podemos agrupar os dados para obter o valor gasto mensalmente por cada parlamentar com transporte.
 ```{r}
 #Qual o parlamentar que mais gasta com transporte (mensalmente)
 #combustiveis, passagens, locação, serviço taxi
+
+NORTE <- c("AM", "RO", "RR", "AC", "AP", "PA", "TO")
+NORDESTE <- c("PI", "AL", "CE", "MA", "PE", "PB", "BA", "SE", "RN")
+CENTRO_OESTE <- c("MS", "MT", "GO", "DF")
+SUDESTE <- c("MG", "RJ", "SP", "ES")
+SUL <- c("RS", "SC", "PR")
+
 dados_transporte <- dados %>% 
   mutate(tipoDespesa = str_to_upper(tipoDespesa)) %>% 
+  mutate(regiao = case_when(
+    sgUF %in% NORTE ~ "NORTE",
+    sgUF %in% NORDESTE ~ "NORDESTE",
+    sgUF %in% CENTRO_OESTE ~ "CENTRO_OESTE",
+    sgUF %in% SUL ~ "SUL",
+    sgUF %in% SUDESTE ~ "SUDESTE"
+  )) %>% 
   filter(str_detect(tipoDespesa, "COMBUSTÍVEIS|PASSAGENS|LOCAÇÃO|TÁXI"))
 
 parlamentar_mensal_transporte <- dados_transporte %>% 
   filter(valorLíquido > 0) %>% 
   mutate(mes = lubridate::month(dataEmissao), ano = lubridate::year(dataEmissao)) %>% 
-  group_by(nomeParlamentar, idCadastro, sgUF, mes, ano) %>% 
-  summarise(gasto_mensal = sum(valorLíquido)) 
+  group_by(nomeParlamentar, idCadastro, sgUF, regiao, mes, ano) %>% 
+  summarise(gasto_mensal = sum(valorLíquido)) %>% 
+  ungroup()
 
 mediana_gasto_mensal_transporte <- parlamentar_mensal_transporte %>% 
-  group_by(nomeParlamentar, idCadastro, sgUF) %>% 
+  group_by(nomeParlamentar, idCadastro, sgUF, regiao) %>% 
   summarise(mediana_gasto = median(gasto_mensal)) %>% 
   na.omit(idCadastro) %>% 
+  ungroup() %>% 
   arrange(desc(mediana_gasto))
 
-mediana_gasto_mensal_transporte
+gasto_mensal_regiao <- parlamentar_mensal_transporte %>% 
+  filter(!is.na(regiao)) %>% 
+  group_by(regiao) %>% 
+  summarise(soma_gasto = sum(gasto_mensal)) %>% 
+  arrange(desc(soma_gasto)) %>% 
+  ungroup()
+
 ```
+Como iremos comparar o gasto dos deputados ao longo de um período de tempo, iremos sumarizar esse gasto como a mediana dos gastos mensais. Além disso, as informações das regiões podem nos ajudar a entender melhor os motivos do gasto, uma vez que todos eles trabalham em Brasília e cada um tem um perfil de despesas com transporte diferente. A seguir geramos os gráficos para entender melhor os dados:
+
+```{r fig.width=8, fig.height=12}
+t1 <- gasto_mensal_regiao %>% 
+  ggplot(aes(x=reorder(regiao,soma_gasto), y=soma_gasto, fill="#FF6666")) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=scales::comma(soma_gasto, big.mark = ".", decimal.mark = ",", prefix = "R$"), vjust = -0.2)) +
+  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",", scale = 1/1000000, prefix = "R$", suffix = "M")) +
+  guides(fill = FALSE) +
+  labs(x = "Regiões do Brasil", y = "Gastos mensais (em milhões de reais)") +
+  ggtitle("Gastos mensais dos parlamentares com transporte por região") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+#selecionando os 25 que mais gastaram c/ transporte
+t2 <- mediana_gasto_mensal_transporte %>% 
+  head(25) %>% 
+  ggplot(aes(x=reorder(nomeParlamentar,mediana_gasto), y=mediana_gasto, fill=regiao)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = scales::number_format(big.mark = ".", decimal.mark = ",", prefix = "R$")) +
+  coord_flip() +
+  labs(fill = "Regiões do Brasil", x="Nome dos Parlamentares", y = "Gasto mensal (em R$)") +
+  ggtitle("Mediana dos gastos mensais dos parlamentares com transporte") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+grid.arrange(t1,t2)
+```
+
+Os gráficos acima nos permitem visualizar que o maior gasto por região é do Nordeste, que de fato é mais distante de Brasília. Além disso, podemos ver que entre os 25 deputados que mais gastam, muitos deles são da região Nordeste, além de muitos da região Norte.
+
+

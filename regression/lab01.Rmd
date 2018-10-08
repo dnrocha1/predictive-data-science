@@ -7,13 +7,17 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 library(tidyverse)
 library(dplyr)
-#corrplot
+library(corrplot)
 library(reshape2)
+library(scales)
 ```
-Nesse laboratório iremos explorar dados sobre as votações de candidatos a deputados federais em eleições, mais especificamenente nos anos de 2006 e 2010. Os dados servirão como base para utilizarmos regressão linear e tentar explicar essas votações. Eles foram extraídos do TSE e englobam cerca de 7300 candidatos. As variáveis serão listadas abaixo e a maioria é auto explicativa, mas quando necessário examinaremos melhor determinada característica.
+Nesse laboratório iremos explorar dados sobre as votações de candidatos a deputados federais em eleições, mais especificamenente nos anos de 2006 e 2010. Os dados servirão como base para utilizarmos regressão linear e tentar explicar essas votações. Eles foram extraídos do TSE e englobam cerca de 7300 candidatos. As variáveis serão listadas abaixo e a maioria é auto explicativa, mas quando necessário examinaremos melhor determinada característica. O objetivo é responder um conjunto de cinco perguntas, todas referente ao conjunto de dados descrito.
 
+### **Entendendo os dados**
+***
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 eleicoes_2006 <- read_csv("./data/eleicoes_2006.csv",
                           local=readr::locale("br"),
@@ -35,7 +39,7 @@ eleicoes_2006 <- read_csv("./data/eleicoes_2006.csv",
                             media_despesa = col_double(),
                             votos = col_integer(),
                             .default = col_character())
-                          )
+)
 
 eleicoes_2010 <- read_csv("./data/eleicoes_2010.csv",
                           local=readr::locale("br"),
@@ -57,42 +61,49 @@ eleicoes_2010 <- read_csv("./data/eleicoes_2010.csv",
                             media_despesa = col_double(),
                             votos = col_integer(),
                             .default = col_character())
-                          )
+)
 eleicoes_all <- read_csv("./data/eleicoes_2006_e_2010.csv",
-                          local=readr::locale("br"),
-                          col_types = cols(
-                            ano = col_integer(),
-                            sequencial_candidato = col_character(),
-                            quantidade_doacoes = col_integer(),
-                            quantidade_doadores = col_integer(),
-                            total_receita = col_double(),
-                            media_receita = col_double(),
-                            recursos_de_outros_candidatos.comites = col_double(),
-                            recursos_de_pessoas_fisicas = col_double(),
-                            recursos_de_pessoas_juridicas = col_double(),
-                            recursos_proprios = col_double(),
-                            recursos_de_partido_politico = col_double(),
-                            quantidade_despesas = col_integer(),
-                            quantidade_fornecedores = col_integer(),
-                            total_despesa = col_double(),
-                            media_despesa = col_double(),
-                            votos = col_integer(),
-                            .default = col_character())
-                          )
-eleicoes_all %>% colnames
+                         local=readr::locale("br"),
+                         col_types = cols(
+                           ano = col_integer(),
+                           sequencial_candidato = col_character(),
+                           quantidade_doacoes = col_integer(),
+                           quantidade_doadores = col_integer(),
+                           total_receita = col_double(),
+                           media_receita = col_double(),
+                           recursos_de_outros_candidatos.comites = col_double(),
+                           recursos_de_pessoas_fisicas = col_double(),
+                           recursos_de_pessoas_juridicas = col_double(),
+                           recursos_proprios = col_double(),
+                           recursos_de_partido_politico = col_double(),
+                           quantidade_despesas = col_integer(),
+                           quantidade_fornecedores = col_integer(),
+                           total_despesa = col_double(),
+                           media_despesa = col_double(),
+                           votos = col_integer(),
+                           .default = col_character())
+)
+#gather
 ```
 
-```{r}
-eleicoes_2006 %>% colnames()
-eleicoes_2006 %>% dplyr::select_if(is.numeric)
-
-#gather
-eleicoes_2006 %>%
-  dplyr::select_if(is.numeric) %>% 
+No primeiro momento os dados serão importados. Em seguida serão gerados histogramas, que podem ajudar a perceber a distribuição de algumas variáveis numéricas. Esses dados serão dispostos com o eixo x na escala logarítmica, minimzando a situação de concentração de valores em uma determinada porção do gráfico. Assim, é possível visualizar a disposição dos dados em torno de algum valor (ou não). 
+```{r message=FALSE, warning=FALSE}
+eleicoes_all %>% 
   dplyr::select(-ano) %>% 
   melt() %>% 
   ggplot(aes(x = value)) +
   facet_wrap(~variable, scales = "free_x") +
-  geom_histogram()
+  geom_histogram() + scale_x_log10()
+
+
 ```
+
+### **Um modelo de regressão múltipla com todas as variáveis é plausível para explicar a variação em y (número de votos) em 2006? Mesma pergunta para 2010.**
+***
+
+Lorem ipsum dolor sit amet
+```{r}
+  eleicoes_all %>% colnames()
+```
+
 

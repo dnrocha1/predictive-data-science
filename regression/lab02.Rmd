@@ -1,0 +1,42 @@
+---
+title: "Predição de Votação de Deputados"
+author: "Daniyel Rocha"
+date: "09 de novembro de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(caret)
+```
+
+```{r}
+train <- read.csv("data/lab02/train.csv")
+test <- read.csv("data/lab02/test.csv")
+```
+
+## Questão 1
+  + Usando todas as variáveis disponíveis, tune (usando validação cruzada): (i) um modelo de regressão Ridge, (ii) um modelo de regressão Lasso e (iii) um modelo KNN. Para os modelos de regressão linear, o parâmetro a ser tunado é o lambda (penalização dos coeficientes) e o KNN o número de vizinhos. (9 pts.)
+  
+```{r}
+eleicoes_all <- train %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(ano = as.factor(ano)) %>% 
+  select(-cargo)
+
+train <- train %>% select(-cargo)
+
+#ridge model
+model.ridge <- caret::train(
+  votos ~ .,
+  data = train,
+  method = "ridge"
+)
+```
+  
+  

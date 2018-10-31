@@ -24,12 +24,59 @@ test <- read.csv("data/lab02/test.csv")
   + Usando todas as variáveis disponíveis, tune (usando validação cruzada): (i) um modelo de regressão Ridge, (ii) um modelo de regressão Lasso e (iii) um modelo KNN. Para os modelos de regressão linear, o parâmetro a ser tunado é o lambda (penalização dos coeficientes) e o KNN o número de vizinhos. (9 pts.)
   
 ```{r}
+input <- train %>% 
+  select(-cargo, -nome,  -ocupacao, -sequencial_candidato, -uf)
+
+fitControl <- trainControl(
+  method = "cv",
+  number = 10
+  )
+
+model.ridge <- caret::train(
+  votos ~.,
+  data = input, 
+  method = "ridge",
+  trControl = fitControl
+)
+
+model.lasso <- caret::train(
+  votos ~.,
+  data = input, 
+  method = "lasso",
+  trControl = fitControl
+)
+```
+  
+```{r}
+train %>% View()
+
 eleicoes_all <- train %>% 
   mutate_if(is.character, as.factor) %>% 
   mutate(ano = as.factor(ano)) %>% 
   select(-cargo)
 
-train <- train %>% select(-cargo)
+a <- train %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(ano = as.factor(ano)) %>% 
+  select_if(is.factor) %>% View()
+  colnames()
+
+train <- train %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(ano = as.factor(ano)) %>% 
+  select(-cargo)
+
+train <-train %>% 
+  select(-one_of(a))
+
+train <- train %>% 
+  select(-cargo, -nome, -ocupacao)
+
+train <- train %>% 
+  select(-nome, -ocupacao)
+
+train %>% glimpse()
+train %>% sapply(function(column){max(table(column))})
 
 #ridge model
 model.ridge <- caret::train(

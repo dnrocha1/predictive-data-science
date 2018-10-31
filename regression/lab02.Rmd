@@ -25,7 +25,7 @@ test <- read.csv("data/lab02/test.csv")
   
 ```{r}
 input <- train %>% 
-  select(-cargo, -nome,  -ocupacao, -sequencial_candidato, -uf)
+  select(-cargo, -nome, -ocupacao, -sequencial_candidato, -uf)
 
 fitControl <- trainControl(
   method = "cv",
@@ -45,45 +45,16 @@ model.lasso <- caret::train(
   method = "lasso",
   trControl = fitControl
 )
-```
-  
-```{r}
-train %>% View()
 
-eleicoes_all <- train %>% 
-  mutate_if(is.character, as.factor) %>% 
-  mutate(ano = as.factor(ano)) %>% 
-  select(-cargo)
-
-a <- train %>% 
-  mutate_if(is.character, as.factor) %>% 
-  mutate(ano = as.factor(ano)) %>% 
-  select_if(is.factor) %>% View()
-  colnames()
-
-train <- train %>% 
-  mutate_if(is.character, as.factor) %>% 
-  mutate(ano = as.factor(ano)) %>% 
-  select(-cargo)
-
-train <-train %>% 
-  select(-one_of(a))
-
-train <- train %>% 
-  select(-cargo, -nome, -ocupacao)
-
-train <- train %>% 
-  select(-nome, -ocupacao)
-
-train %>% glimpse()
-train %>% sapply(function(column){max(table(column))})
-
-#ridge model
-model.ridge <- caret::train(
-  votos ~ .,
-  data = train,
-  method = "ridge"
+model.knn <- caret::train(
+  votos ~.,
+  data = input,
+  method = "knn",
+  trControl = fitControl
 )
 ```
-  
-  
+
+```{r}
+
+```
+

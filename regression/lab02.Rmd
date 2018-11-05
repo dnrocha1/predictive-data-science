@@ -20,39 +20,160 @@ train <- read.csv("data/lab02/train.csv")
 test <- read.csv("data/lab02/test.csv")
 ```
 
+```{r}
+input <- train %>% 
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
+```
+
 ## Questão 1
   + Usando todas as variáveis disponíveis, tune (usando validação cruzada): (i) um modelo de regressão Ridge, (ii) um modelo de regressão Lasso e (iii) um modelo KNN. Para os modelos de regressão linear, o parâmetro a ser tunado é o lambda (penalização dos coeficientes) e o KNN o número de vizinhos. (9 pts.)
   
 ```{r}
-input <- train %>% 
-  select(-cargo, -nome, -ocupacao, -sequencial_candidato, -uf)
 
-fitControl <- trainControl(
-  method = "cv",
-  number = 10
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 15,
+  verboseIter = TRUE
   )
+
+lambda.range <- expand.grid(lambda = seq(10^-10, 10^-2, length=20))
 
 model.ridge <- caret::train(
   votos ~.,
   data = input, 
   method = "ridge",
-  trControl = fitControl
+  metric = "RMSE",
+  trControl = ctrl,
+  tuneGrid = lambda.range,
+  preProcess = c('scale', 'center')
 )
+
+model.ridge
+plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
+
+model.ridge %>% 
+  varImp() %>% 
+  ggplot()
+
+predictors(model.ridge)
+```
+
+```{r}
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 10,
+  verboseIter = TRUE
+  )
+
+lambda.range <- expand.grid(fraction = seq(10^-2, 10^-10, length=100))
 
 model.lasso <- caret::train(
   votos ~.,
   data = input, 
   method = "lasso",
-  trControl = fitControl
+  metric = "RMSE",
+  trControl = ctrl,
+  tuneGrid = lambda.range,
+  preProcess = c('scale', 'center')
 )
+
+model.lasso
+plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
+
+model.lasso %>% 
+  varImp() %>% 
+  ggplot()
+
+predictors(model.lasso)
+```
+
+
+```{r}
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 1,
+  verboseIter = TRUE
+  )
+
+knn.range <- expand.grid(k = seq(1, 100, length=100))
 
 model.knn <- caret::train(
   votos ~.,
-  data = input,
+  data = input, 
   method = "knn",
-  trControl = fitControl
+  metric = "RMSE",
+  trControl = ctrl,
+  tuneGrid = knn.range,
+  preProcess = c('scale', 'center')
 )
+
+model.knn
+plot(model.knn)
+
+model.knn %>% 
+  varImp() %>% 
+  ggplot()
+
+predictors(model.knn)
 ```
+
+
+```{r}
+
+# input <- train %>% 
+#   select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
+# 
+# # ctrl <- trainControl(
+# #   method = "repeatedcv",
+# #   number = 5,
+# #   repeats = 5,
+# #   verboseIter = TRUE
+# #   )
+# 
+# ctrl <- trainControl(
+#   method = "cv",
+#   number = 5,
+#   repeats = 5,
+#   verboseIter = TRUE
+#   )
+# 
+# model.ridge
+# plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
+# 
+# model.lasso <- caret::train(
+#   votos ~.,
+#   data = input, 
+#   method = "lasso",
+#   metric = "RMSE",
+#   trControl = ctrl,
+#   tuneGrid = lambda.range,
+#   tuneLength = 20,
+#   preProcess = c('scale', 'center')
+# )
+# 
+# model.lasso
+# plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
+# 
+# knn.range <- expand.grid(k = seq(1, 50))
+# 
+# model.knn <- caret::train(
+#   votos ~.,
+#   data = input,
+#   method = "knn",
+#   metric = "RMSE",
+#   trControl = ctrl,
+#   tuneGrid = knn.range,
+#   preProcess = c('scale', 'center')
+# )
+# 
+# model.knn
+# plot(model.knn, xlab = "Lambda", ylab = "RMSE")
+```
+
+## FAZER ELASTIC NET
 
 ```{r}
 

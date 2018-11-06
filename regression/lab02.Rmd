@@ -63,14 +63,15 @@ predictors(model.ridge)
 
 
 ```{r}
-ctrl <- trainControl(
-  method = "repeatedcv",
-  number = 70,
-  repeats = 10,
-  verboseIter = TRUE
-  )
+# ctrl <- trainControl(
+#   method = "repeatedcv",
+#   number = 70,
+#   repeats = 10,
+#   verboseIter = TRUE
+#   )
 
-lambda.range <- expand.grid(fraction = seq(10^-2, 10^-10, length=100))
+lambda.range <- expand.grid(fraction = seq(10^-2, 10^-8, length=20))
+# lambda.range <- expand.grid(fraction = seq(0.01, 10^-8, length=20))
 
 model.lasso <- caret::train(
   votos ~.,
@@ -94,12 +95,12 @@ predictors(model.lasso)
 
 
 ```{r}
-ctrl <- trainControl(
-  method = "repeatedcv",
-  number = 10,
-  repeats = 1,
-  verboseIter = TRUE
-  )
+# ctrl <- trainControl(
+#   method = "repeatedcv",
+#   number = 40,
+#   repeats = 1,
+#   verboseIter = TRUE
+#   )
 
 knn.range <- expand.grid(k = seq(1, 100, length=100))
 
@@ -124,56 +125,67 @@ predictors(model.knn)
 ```
 
 
+## Questão 2
+  + Compare os três modelos em termos do erro RMSE de validação cruzada. (9 pts.)
+```{r}
+results <- resamples(list(knn=model.knn, ridge=model.ridge, lasso=model.lasso))
+
+results %>% summary("RMSE")
+
+
+```
+
+
 ```{r}
 
-# input <- train %>% 
-#   select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
-# 
-# # ctrl <- trainControl(
-# #   method = "repeatedcv",
-# #   number = 5,
-# #   repeats = 5,
-# #   verboseIter = TRUE
-# #   )
-# 
+input <- train %>%
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
+
 # ctrl <- trainControl(
-#   method = "cv",
+#   method = "repeatedcv",
 #   number = 5,
 #   repeats = 5,
 #   verboseIter = TRUE
 #   )
-# 
-# model.ridge
-# plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
-# 
-# model.lasso <- caret::train(
-#   votos ~.,
-#   data = input, 
-#   method = "lasso",
-#   metric = "RMSE",
-#   trControl = ctrl,
-#   tuneGrid = lambda.range,
-#   tuneLength = 20,
-#   preProcess = c('scale', 'center')
-# )
-# 
-# model.lasso
-# plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
-# 
-# knn.range <- expand.grid(k = seq(1, 50))
-# 
-# model.knn <- caret::train(
-#   votos ~.,
-#   data = input,
-#   method = "knn",
-#   metric = "RMSE",
-#   trControl = ctrl,
-#   tuneGrid = knn.range,
-#   preProcess = c('scale', 'center')
-# )
-# 
-# model.knn
-# plot(model.knn, xlab = "Lambda", ylab = "RMSE")
+
+ctrl <- trainControl(
+  method = "cv",
+  number = 5,
+  repeats = 5,
+  verboseIter = TRUE
+  )
+
+model.ridge
+plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
+
+model.lasso <- caret::train(
+  votos ~.,
+  data = input,
+  method = "lasso",
+  metric = "RMSE",
+  trControl = ctrl,
+  tuneGrid = lambda.range,
+  tuneLength = 20,
+  preProcess = c('scale', 'center')
+)
+
+model.lasso
+plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
+
+knn.range <- expand.grid(k = seq(1, 50))
+
+model.knn <- caret::train(
+  votos ~.,
+  data = input,
+  method = "knn",
+  metric = "RMSE",
+  trControl = ctrl,
+  tuneGrid = knn.range,
+  preProcess = c('scale', 'center')
+)
+
+model.knn
+plot(model.knn, xlab = "Lambda", ylab = "RMSE")
 ```
 
 ## FAZER ELASTIC NET

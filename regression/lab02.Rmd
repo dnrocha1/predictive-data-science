@@ -21,8 +21,10 @@ test <- read.csv("data/lab02/test.csv")
 ```
 
 ```{r}
+#ano!, uf!, cargo!, estado_civil, sequencial_candidato!, partido, sexo, ocupacao!, nome!, grau
+#grau, partido?, estado_civil??, sexo???
 input <- train %>% 
-  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil)
 ```
 
 ## Questão 1
@@ -32,12 +34,12 @@ input <- train %>%
 
 ctrl <- trainControl(
   method = "repeatedcv",
-  number = 5,
-  repeats = 15,
+  number = 10,
+  repeats = 10,
   verboseIter = TRUE
   )
 
-lambda.range <- expand.grid(lambda = seq(10^-10, 10^-2, length=20))
+lambda.range <- expand.grid(lambda = seq(10^-10, 10^-2, length=30))
 
 model.ridge <- caret::train(
   votos ~.,
@@ -59,10 +61,11 @@ model.ridge %>%
 predictors(model.ridge)
 ```
 
+
 ```{r}
 ctrl <- trainControl(
   method = "repeatedcv",
-  number = 10,
+  number = 70,
   repeats = 10,
   verboseIter = TRUE
   )

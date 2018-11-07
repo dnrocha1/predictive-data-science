@@ -2,7 +2,10 @@
 title: "Predição de Votação de Deputados"
 author: "Daniyel Rocha"
 date: "09 de novembro de 2018"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -15,29 +18,41 @@ library(dplyr)
 library(caret)
 ```
 
+# Introdução
+  Essa análise tem como objetivo a construção de modelos preditivos para a votação de candidatos das eleições de 2006 e 2010. Os dados utilizados são os mesmos [desse](http://www.rpubs.com/dnrocha/regressao_deputados) relatório, que contém mais informações sobre eles. Esses valores valores foram separados entre dados de treino e dados de teste, que depois serão utilizados para realizar as predições.
+
 ```{r}
 train <- read.csv("data/lab02/train.csv")
 test <- read.csv("data/lab02/test.csv")
-```
 
-```{r}
-#ano!, uf!, cargo!, estado_civil, sequencial_candidato!, partido, sexo, ocupacao!, nome!, grau
-#grau, partido?, estado_civil??, sexo???
 input <- train %>% 
-  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil)
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil, -grau, -partido)
 ```
 
+# Perguntas
 ## Questão 1
-  + Usando todas as variáveis disponíveis, tune (usando validação cruzada): (i) um modelo de regressão Ridge, (ii) um modelo de regressão Lasso e (iii) um modelo KNN. Para os modelos de regressão linear, o parâmetro a ser tunado é o lambda (penalização dos coeficientes) e o KNN o número de vizinhos. (9 pts.)
+
+  + Usando todas as variáveis disponíveis, tune (usando validação cruzada): (i) um modelo de regressão Ridge, (ii) um modelo de regressão Lasso e (iii) um modelo KNN. Para os modelos de regressão linear, o parâmetro a ser tunado é o lambda (penalização dos coeficientes) e o KNN o número de vizinhos.
+  
+  Inicialmente é feita uma configuração para a validação cruzada, com k-fold = 10 e realizando 10 repetições. Nesse caso, iremos separar os dados de teste em 10 partições e escolher uma para ser comparada com as outras 9.
   
 ```{r}
-
+#configuracao da validacao cruzada
 ctrl <- trainControl(
   method = "repeatedcv",
   number = 10,
   repeats = 10,
   verboseIter = TRUE
   )
+```
+  
+  
+### Regressão Ridge
+
+O ridge utiliza o lambda como forma de penalizar determinados parâmetros, fazendo com que o modelo seja menos sensível a variáveis com pouca importância. Essa é uma forma de regularizar o modelo, podendo ser útil para que o modelo não seja muito ajustado aos dados de treino - o famoso overfitting. Assim, o bias e a variância são reduzidos.  
+Para gerar o modelo utilizando esse tipo de regressão, desejamos encontrar um valor para lambda que produza um menor RMSE (nesse caso). A aplicação de validação cruzada será útil para esse propósito.
+  
+```{r eval=FALSE}
 
 lambda.range <- expand.grid(lambda = seq(10^-10, 10^-2, length=30))
 
@@ -51,27 +66,26 @@ model.ridge <- caret::train(
   preProcess = c('scale', 'center')
 )
 
-model.ridge
-plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
+# model.ridge
+# plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
 
-model.ridge %>% 
+ridgeImp <- model.ridge %>% 
   varImp() %>% 
   ggplot()
 
-predictors(model.ridge)
+# predictors(model.ridge)
 ```
 
-
 ```{r}
-# ctrl <- trainControl(
-#   method = "repeatedcv",
-#   number = 70,
-#   repeats = 10,
-#   verboseIter = TRUE
-#   )
+model.ridge
+```
+
+### Regressão Lasso
+
+Para o lasso, será utilizada a mesma configuração de validação cruzada de modo a encontrar um valor ótimo para lambda.
+```{r eval=FALSE}
 
 lambda.range <- expand.grid(fraction = seq(10^-2, 10^-8, length=20))
-# lambda.range <- expand.grid(fraction = seq(0.01, 10^-8, length=20))
 
 model.lasso <- caret::train(
   votos ~.,
@@ -83,27 +97,27 @@ model.lasso <- caret::train(
   preProcess = c('scale', 'center')
 )
 
-model.lasso
-plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
+# model.lasso
+# plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
 
-model.lasso %>% 
+lassoImp <- model.lasso %>% 
   varImp() %>% 
   ggplot()
 
-predictors(model.lasso)
+# predictors(model.lasso)
 ```
 
-
 ```{r}
-# ctrl <- trainControl(
-#   method = "repeatedcv",
-#   number = 40,
-#   repeats = 1,
-#   verboseIter = TRUE
-#   )
+model.lasso
+```
+
+### kNN
+
+Para o kNN testaremos os valores para k, que indicam a quantidade de vizinhos que serão testados. O objetivo é encontrar o k que gere o menor RMSE.
+```{r eval=FALSE}
 
 knn.range <- expand.grid(k = seq(1, 100, length=100))
-
+ 
 model.knn <- caret::train(
   votos ~.,
   data = input, 
@@ -114,83 +128,117 @@ model.knn <- caret::train(
   preProcess = c('scale', 'center')
 )
 
+# model.knn
+# plot(model.knn)
+
+# predictors(model.knn)
+```
+
+```{r}
 model.knn
-plot(model.knn)
-
-model.knn %>% 
-  varImp() %>% 
-  ggplot()
-
-predictors(model.knn)
 ```
 
 
 ## Questão 2
-  + Compare os três modelos em termos do erro RMSE de validação cruzada. (9 pts.)
-```{r}
-results <- resamples(list(knn=model.knn, ridge=model.ridge, lasso=model.lasso))
+  + Compare os três modelos em termos do erro RMSE de validação cruzada.
+  
+```{r eval=FALSE}
+plot.ridge <- plot(model.ridge, ylab = "RMSE", xlab = "Lambda")
+plot.lasso <- plot(model.lasso, ylab = "RMSE", xlab = "Lambda")
+plot.knn <- plot(model.knn, ylab = "RMSE", xlab = "#Vizinhos")
+
+results <- resamples(list(ridge=model.ridge, lasso=model.lasso, knn=model.knn))
+```
+  
+```{r fig.width=15, fig.height=5}
+
+gridExtra::grid.arrange(plot.ridge, plot.lasso, plot.knn, ncol = 3)
 
 results %>% summary("RMSE")
-
-
 ```
 
+Sabendo que todos os modelos utilizaram os mesmos parâmetros de validação cruzada, o que gerou o menor RMSE foi o kNN. Ele foi bem mais eficiente do que os dois primeiros. O ridge e o lasso apresentaram desempenhos similares, no geral. Os valores obtidos foram: 
+
+- **Ridge**: 37562.57
+- **Lasso**: 37326.99
+- **kNN**: 32097.67
+
+## Questão 3
+  + Quais as variáveis mais importantes segundo o modelo de regressão Ridge e Lasso?  Variáveis foram descartadas pelo Lasso? Quais?
+```{r}
+gridExtra::grid.arrange(ridgeImp, lassoImp)
+```
+  
+  As variáveis mais importantes para os dois modelos de regressão são `total_receita`, `total_despesa`, `recursos_de_pessoas_juridicas` e `recursos_de_pessoas_fisicas`. Nota-se também que ambos apresentam comportamento semelhante em relação a utilização de parâmetros para o modelo.
 
 ```{r}
+params.lasso <- predictors(model.lasso)
+input %>% 
+  select(-votos, -total_receita) %>% 
+  select(-params.lasso) %>% 
+  names()
+```
 
-input <- train %>%
-  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf)
+A variável que descartada pelo modelo foi `quantidade_doacoes`. Outras variáveis não foram utilizadas por terem importância muito baixa, tais como `recursos_de_outros_candidatos.comites`, `media_despesa` e `recursos_proprios`.
 
-# ctrl <- trainControl(
-#   method = "repeatedcv",
-#   number = 5,
-#   repeats = 5,
-#   verboseIter = TRUE
-#   )
 
-ctrl <- trainControl(
-  method = "cv",
-  number = 5,
-  repeats = 5,
-  verboseIter = TRUE
-  )
+## Questão 4
+  + Re-treine o melhor modelo (usando os melhores valores de parâmetros encontrados em todos os dados, sem usar validação cruzada).
 
-model.ridge
-plot(model.ridge, xlab = "Lambda", ylab = "RMSE")
+```{r eval=FALSE}
+input.final <- input %>% 
+  select(votos, total_receita, total_despesa, recursos_de_pessoas_juridicas, recursos_de_pessoas_fisicas, 
+         quantidade_fornecedores, quantidade_despesas, media_receita, recursos_de_partido_politico)
 
-model.lasso <- caret::train(
+knn.range <- expand.grid(k = model.knn$bestTune)
+ 
+model.knn.final <- caret::train(
   votos ~.,
-  data = input,
-  method = "lasso",
-  metric = "RMSE",
-  trControl = ctrl,
-  tuneGrid = lambda.range,
-  tuneLength = 20,
-  preProcess = c('scale', 'center')
-)
-
-model.lasso
-plot(model.lasso, xlab = "Lambda", ylab = "RMSE")
-
-knn.range <- expand.grid(k = seq(1, 50))
-
-model.knn <- caret::train(
-  votos ~.,
-  data = input,
+  data = input.final, 
   method = "knn",
   metric = "RMSE",
-  trControl = ctrl,
+  trControl = trainControl(method="none", verboseIter = TRUE),
   tuneGrid = knn.range,
-  preProcess = c('scale', 'center')
+  preProcess = c('scale', 'center', 'nzv')
 )
 
-model.knn
-plot(model.knn, xlab = "Lambda", ylab = "RMSE")
+# model.knn.final
 ```
 
-## FAZER ELASTIC NET
+### Bônus
 
+  + Modelo gerado utilizando Random Forest
+
+```{r eval=FALSE}
+input.new <- input %>%
+  select(-partido, -grau)
+
+model.rf2 <- caret::train(
+  votos ~.,
+  data = input.new,
+  method = "rf",
+  metric = "RMSE",
+  preProcess = c('scale', 'center'),
+  tuneGrid = expand.grid(.mtry=c(1:7)),
+  trControl = trainControl(method="repeatedcv", number=10, repeats = 1, search = "grid", verboseIter = TRUE)
+)
+```
+
+Nesse caso, `mtry` é um parâmetro que representa o número de variáveis que será randomicamente escolhida como candidata para a construção da árvore de decisão. Foram testados valores num intervalo de 1 a 7 e o melhor resultado encontrou um RMSE de 30710.04.
 ```{r}
+model.rf2
+plot(model.rf2)
 
+predictors(model.rf2)
+```
+## Questão 5
+  
+  + Use esse último modelo treinado para prever os dados de teste disponíveis no [challenge](https://www.kaggle.com/c/ufcg-cdp-20182) que criamos na plataforma Kaggle.
+
+```{r eval=FALSE}
+pred <- predict(model.rf2, test)
+ans <- data.frame(ID = test$sequencial_candidato, votos = pred)
+ans$ID <- as.character(ans$ID)
+write_csv(ans,"data/lab02/kaggle.csv")
 ```
 

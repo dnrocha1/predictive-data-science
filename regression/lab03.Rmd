@@ -1,0 +1,29 @@
+---
+title: "Predição de Deputados Eleitos"
+author: "Daniyel Rocha"
+date: "03 de dezembro de 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(caret)
+```
+
+# Introdução
+
+```{r}
+train <- read.csv("data/lab02/train.csv")
+test <- read.csv("data/lab02/test.csv")
+
+input <- train %>% 
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil, -grau, -partido)
+```

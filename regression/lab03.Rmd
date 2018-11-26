@@ -16,9 +16,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(caret)
+library(DMwR)
 library(caTools)
 library(unbalanced)
-library(DMwR)
 ```
 
 # Introdução
@@ -26,26 +26,51 @@ library(DMwR)
 ```{r}
 train <- read.csv("data/lab03/train.csv")
 test <- read.csv("data/lab03/test.csv")
+
+input <- train %>% 
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil, -grau, -partido)
 ```
 
 # 1 Há desbalanceamento das classes (isto é, uma classe tem muito mais instâncias que outra)? Em que proporção? Quais efeitos colaterais o desbalanceamento de classes pode causar no classificador? Como você poderia tratar isso? (10 pt.)
 ```{r}
 summary(train$situacao)
-balanced_data <- DMwR::SMOTE(train$situacao ~., data = train, perc.over = 600, perc.under = 100)
-summary(balanced_data$situacao)
+# balanced_data <- DMwR::SMOTE(train$situacao ~., data = train, perc.over = 600, perc.under = 100)
+# summary(balanced_data$situacao)
 #https://rpubs.com/abhaypadda/smote-for-imbalanced-data
 ```
+Os dados de treino utilizados apresentam desbalanceamento das classes
 
 # 2 Treine: um modelo de regressão logística, uma árvore de decisão e um modelo de adaboost. Tune esses modelos usando validação cruzada e controle overfitting se necessário, considerando as particularidades de cada modelo.  (20 pts.)
 
 ```{r}
 #configuracao da validacao cruzada
 ctrl <- trainControl(
+  # sampling = "rose",
+  sampling = "smote",
   method = "cv",
   number = 5,
+  search = "random",
   verboseIter = TRUE
   )
+```
 
+```{r}
+#knn
+
+knn.range <- expand.grid(k = seq(1, 100, length=100))
+
+model.knn <- caret::train(
+  situacao ~.,
+  data = input,
+  method = "knn",
+  trControl = ctrl,
+  # tuneGrid = knn.range,
+  preProcess = c('scale', 'center', 'nzv')
+)
+```
+
+
+```{r}
 log_reg <- caret::train(
   situacao ~.,
   data = train %>% select(-cargo),

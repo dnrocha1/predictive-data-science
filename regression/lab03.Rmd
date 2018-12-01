@@ -16,9 +16,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(caret)
-library(DMwR)
-library(caTools)
-library(unbalanced)
+# library(DMwR)
+# library(caTools)
+# library(unbalanced)
 ```
 
 # Introdução
@@ -37,15 +37,18 @@ summary(train$situacao)
 # balanced_data <- DMwR::SMOTE(train$situacao ~., data = train, perc.over = 600, perc.under = 100)
 # summary(balanced_data$situacao)
 #https://rpubs.com/abhaypadda/smote-for-imbalanced-data
+
+round((summary(input$situacao)/sum(summary(input$situacao))), 2)
+
 ```
-Os dados de treino utilizados apresentam desbalanceamento das classes
+Podemos observar desbalanceamento das classes, considerando `situacao`, que é a variável alvo. Há muito mais ocorrências de `nao_eleito`, cerca de 87%, contra uma proporção bem menor em relação a candidatos que foram eleitos, representando cerca de 13% do conjunto total. Essa situação pode fazer com que os modelos produzidos classifiquem de forma incorreta os dados reais. Isso acontece porque geralmente modelos de classificação são mais sensíveis a classes desbalanceadas, fazendo com que o modelo final tenha uma tendência de predizer a classe com um maior número de ocorrências.  
+De forma a não afetar tanto o modelo final, uma abordagem possível é balancear as classes. Dessa maneira é possível aproximar o número de instâncias da classe, permitindo que o modelo seja treinado e testado sem ser muito afetado pelo desbalanceamento. Para que isso seja feito, é possível aumentar a frequência da classe minoritária (over-sampling) ou então diminuir o número de ocorrências da classe maioritária (under-sampling), cada uma apresentando vantagens e desvantagens.
 
 # 2 Treine: um modelo de regressão logística, uma árvore de decisão e um modelo de adaboost. Tune esses modelos usando validação cruzada e controle overfitting se necessário, considerando as particularidades de cada modelo.  (20 pts.)
 
 ```{r}
 #configuracao da validacao cruzada
 ctrl <- trainControl(
-  # sampling = "rose",
   sampling = "smote",
   method = "cv",
   number = 5,

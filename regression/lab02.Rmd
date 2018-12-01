@@ -236,7 +236,7 @@ predictors(model.rf2)
   + Use esse último modelo treinado para prever os dados de teste disponíveis no [challenge](https://www.kaggle.com/c/ufcg-cdp-20182) que criamos na plataforma Kaggle.
 
 ```{r eval=FALSE}
-pred <- predict(model.rf2, test)
+pred <- predict(model.rf, test)
 ans <- data.frame(ID = test$sequencial_candidato, votos = pred)
 ans$ID <- as.character(ans$ID)
 write_csv(ans,"data/lab02/kaggle.csv")

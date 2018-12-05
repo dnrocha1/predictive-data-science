@@ -1,7 +1,7 @@
 ---
 title: "Predição de Deputados Eleitos"
 author: "Daniyel Rocha"
-date: "03 de dezembro de 2018"
+date: "05 de dezembro de 2018"
 output: 
   html_document:
     toc: true
@@ -18,72 +18,83 @@ library(dplyr)
 library(caret)
 library(rpart)
 library(rpart.plot)
-# library(DMwR)
-# library(caTools)
-# library(unbalanced)
 ```
 
 # Introdução
 
 ```{r}
-train <- read.csv("data/lab03/train.csv")
-test <- read.csv("data/lab03/test.csv")
+data  <- read.csv("data/lab03/train.csv")
 
-input <- train %>% 
+#divide treino e teste
+set.seed(101)
+
+index <- createDataPartition(data$situacao, p = 0.7, list = FALSE)
+train.data <- data[index,]
+test.data <- data[-index,]
+
+input.train <- train.data %>% 
+  select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil, -grau, -partido)
+
+input.test <- test.data %>% 
   select(-cargo, -nome, -ocupacao, -ano, -sequencial_candidato, -uf, -sexo, -estado_civil, -grau, -partido)
 
 ```
 
+
 # 1 Há desbalanceamento das classes (isto é, uma classe tem muito mais instâncias que outra)? Em que proporção? Quais efeitos colaterais o desbalanceamento de classes pode causar no classificador? Como você poderia tratar isso? (10 pt.)
 ```{r}
-summary(train$situacao)
-# balanced_data <- DMwR::SMOTE(train$situacao ~., data = train, perc.over = 600, perc.under = 100)
-# summary(balanced_data$situacao)
-#https://rpubs.com/abhaypadda/smote-for-imbalanced-data
+summary(train.data$situacao)
 
 round((summary(input$situacao)/sum(summary(input$situacao))), 2)
 
 ```
 Podemos observar desbalanceamento das classes, considerando `situacao`, que é a variável alvo. Há muito mais ocorrências de `nao_eleito`, cerca de 87%, contra uma proporção bem menor em relação a candidatos que foram eleitos, representando cerca de 13% do conjunto total. Essa situação pode fazer com que os modelos produzidos classifiquem de forma incorreta os dados reais. Isso acontece porque geralmente modelos de classificação são mais sensíveis a classes desbalanceadas, fazendo com que o modelo final tenha uma tendência de predizer a classe com um maior número de ocorrências.  
-De forma a não afetar tanto o modelo final, uma abordagem possível é balancear as classes. Dessa maneira é possível aproximar o número de instâncias da classe, permitindo que o modelo seja treinado e testado sem ser muito afetado pelo desbalanceamento. Para que isso seja feito, é possível aumentar a frequência da classe minoritária (over-sampling) ou então diminuir o número de ocorrências da classe maioritária (under-sampling), cada uma apresentando vantagens e desvantagens.
+De forma a não afetar tanto o modelo final, uma abordagem possível é balancear as classes. Dessa maneira é possível aproximar o número de instâncias da classe, permitindo que o modelo seja treinado e testado sem ser muito afetado pelo desbalanceamento. Para que isso seja feito, é possível aumentar a frequência da classe minoritária (over-sampling) ou então diminuir o número de ocorrências da classe maioritária (under-sampling), cada uma apresentando vantagens e desvantagens.  
+Daqui em diante aplicaremos o balanceamento utilizando uma técnica de oversampling chamada SMOTE (Synthetic Minority Over-sampling Technique). Ela basicamente irá realizar oversampling selecionando as instancias da classe minoritária de modo a diminuir o overfitting.
 
 # 2 Treine: um modelo de KNN, regressão logística, uma árvore de decisão e um modelo de adaboost. Tune esses modelos usando validação cruzada e controle overfitting se necessário, considerando as particularidades de cada modelo.  (20 pts.)
 
+## KNN
 ```{r}
 #configuracao da validacao cruzada
 ctrl <- trainControl(
   sampling = "smote",
   method = "cv",
-  number = 5,
-  # search = "random",
+  number = 10,
   verboseIter = TRUE
   )
-```
 
-```{r}
 #knn
-
 knn.range <- expand.grid(k = seq(1, 500, length = 60))
 
 model.knn <- caret::train(
   situacao ~.,
-  data = input,
+  data = input.train,
   method = "knn",
   trControl = ctrl,
   tuneGrid = knn.range,
   preProcess = c('scale', 'center', 'nzv')
 )
 
-model.knn
+model.knn$modelInfo
 plot(model.knn)
+
 ```
 
-
+## Regressão Logística
 ```{r}
+#configuracao da validacao cruzada
+ctrl <- trainControl(
+  sampling = "smote",
+  method = "cv",
+  number = 10,
+  verboseIter = TRUE
+  )
+
 #logistic
 model.logistic <- caret::train(
   situacao ~.,
-  data = input,
+  data = input.train,
   method = "glm",
   family = "binomial",
   trControl = ctrl,
@@ -91,33 +102,38 @@ model.logistic <- caret::train(
 )
 
 model.logistic
-model.logistic %>% confusionMatrix()
+# model.logistic %>% confusionMatrix()
 
 ```
 
-
+## Árvore de Decisão
 ```{r}
+#configuracao da validacao cruzada
+ctrl <- trainControl(
+  sampling = "smote",
+  verboseIter = TRUE
+  )
+
 #decision tree
 model.dt <- caret::train(
   situacao ~.,
-  data = input,
+  data = input.train,
   method = "rpart",
   tuneLength = 10,
-  # trControl = trainControl(sampling = "smote", method = "repeatedcv", number = 5, repeats = 5, verboseIter = TRUE),
+  trControl = ctrl,
   preProcess = c('scale', 'center', 'nzv')
 )
 
-	
 model.dt
 rpart.plot::prp(model.dt$finalModel, box.palette="RdBu", shadow.col="gray", nn=TRUE, extra = 1, type = 1, digits = -3)
 
 ```
-
+## Adaboost
 ```{r}
 #ada boost
 model.ada <- caret::train(
   situacao ~.,
-  data = input,
+  data = input.train,
   method = "adaboost",
   preProcess = c('scale', 'center', 'nzv'),
   verbose = TRUE
@@ -131,12 +147,114 @@ plot(model.ada)
 
 # 3 Reporte precision, recall e f-measure no treino e validação. Há uma grande diferença de desempenho no treino/validação? Como você avalia os resultados? Justifique sua resposta. (10 pt.)
 
-```{r}
-confusionMatrix(data = model.logistic)
+Precision e recall são medidas diferentes da acurácia. Para facilitar o entendimento, consideremos a matriz de confusão abaixo.
+![Confusion matrix](./data/lab03/confusion_matrix.jpeg)
+- *Acurácia* refere-se a proporção dos resultados verdadeiros entre o total de observações. Nesse caso, ele é definido por (TP+TN)/(TP+TN+FP+FN).
+- *Precision* diz respeito a uma medida que analisa o modelo em relação as previsões com resultados positivos.
+- *Recall* calcula a proporção de observações positivas entre o total que realmente apresenta positivos.
 
-input %>% colnames()
+![Precision e Recall](./data/lab03/precision_recall.png)
+
+O F1 utiliza os dois valores anteriores e tem como objetivo ser uma medida balanceada. Nesse caso, ela pode ser uma alternativa melhor do que analisar cada um dos outros em separado.
+
+![F1](./data/lab03/f1.png)
+
+```{r}
+reportMeasures <- function(model, data) {
+  pred <- predict(model, data)
+  levels <- c("eleito", "nao_eleito")
+  xtab <- table(pred, data$situacao)
+  
+  accuracy <- confusionMatrix(pred, data$situacao, mode = "prec_recall")$overall[1]
+  precision <- confusionMatrix(pred, data$situacao, mode = "prec_recall")$byClass[5]
+  recall <- confusionMatrix(pred, data$situacao, mode = "prec_recall")$byClass[6]
+  f1 <- confusionMatrix(pred, data$situacao, mode = "prec_recall")$byClass[7]
+  
+  tibble(accuracy, precision, recall, f1)
+}
+
+combineReports <- function(df1, df2) {
+  bind_rows("Treino" = df1, "Validação" = df2, .id = "Treino/Validação")
+}
+```
+
+
+### KNN
+```{r}
+knn.train <- reportMeasures(model.knn, input.train)
+knn.test <- reportMeasures(model.knn, input.test)
+
+combineReports(knn.train, knn.test)
 
 ```
+
+
+### Regressão Logística
+```{r}
+logistic.train <- reportMeasures(model.logistic, input.train)
+logistic.test <- reportMeasures(model.logistic, input.test)
+
+combineReports(logistic.train, logistic.test)
+
+```
+
+
+### Árvore de Decisão
+```{r}
+dt.train <- reportMeasures(model.dt, input.train)
+dt.test <- reportMeasures(model.dt, input.test)
+
+combineReports(dt.train, dt.test)
+
+```
+
+### Adaboost
+```{r}
+ada.train <- reportMeasures(model.ada, input.train)
+ada.test <- reportMeasures(model.ada, input.test)
+
+combineReports(ada.train, ada.test)
+
+```
+
+
+### Resultados
+
+No geral as medidas diferem pouco em relação aos dados de treino e os de validação. Isso pode acontecer em decorrência da base de dados não ser muito grande, contribuindo para que não exista diferenças significativas entre as medidas. Apesar disso, todos os modelos apresentaram resultados satisfatórios.
+
+
+# 4 Interprete as saídas dos modelos. Quais atributos parecem ser mais importantes de acordo com cada modelo? (20 pts.)
+
+- A importância das variáveis está numa escala de 0 a 100.
+
+## KNN
+
+```{r}
+varImp(model.knn)
+```
+Entre todas as variáveis utilizadas para construção do KNN, a partir de `media_despesa` todas as variáveis podem deixar de fazer parte do modelo. Talvez selecionando `total_despesa`, `total_receita`, `quantidade_fornecedores`, `quantidade_despesas`, `recursos_de_pessoas_juridicas` seja possível a construção de um modelo forte.
+
+## Regressão Logística
+
+```{r}
+varImp(model.logistic)
+```
+Para esse preditor, boa parte dos atributos selecionados não teve grande importância. Selecionar os 4 melhores pode ser suficiente para obter um modelo melhor.
+
+## Árvore de Decisão
+
+```{r}
+varImp(model.dt)
+```
+Novamente, muitas variáveis com importância baixíssima para a construção deste modelo.
+
+
+## Adaboost
+
+```{r}
+varImp(model.ada)
+```
+No caso do Adaboost, muitas variáveis foram importantes se compararmos com os outros modelos. Isso pode ser por conta de como o modelo é idealizado, explorando cada variável.
 
 ```{r}
 model.xgboost <- caret::train(
@@ -151,7 +269,6 @@ model.xgboost <- caret::train(
 model.xgboost
 plot(model.xgboost)
 ```
-
 
 ```{r}
 model.svm <- caret::train(
@@ -180,7 +297,7 @@ model.gb <- caret::train(
 model.gb
 ```
 
-
+# Submissão no Kaggle
 
 ```{r}
 pred <- predict(model.gb, test)
@@ -188,4 +305,14 @@ ans <- data.frame(Id = test$sequencial_candidato, Predicted = pred)
 ans$Id <- as.character(ans$Id)
 write_csv(ans,"data/lab03/kaggle.csv")
 ```
+
+
+```{r}
+varImp(model.knn)
+plot(varImp(model.knn))
+
+predictors(model.knn)
+```
+
+
 
